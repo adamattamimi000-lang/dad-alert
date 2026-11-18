@@ -223,9 +223,9 @@ el("loginBtn").onclick = async () => {
       el("password").value
     );
   } catch (e) {
-    el("loginStatus").innerText =
-      "Login gagal. Semak email dan password.";
-  }
+  el("loginStatus").innerText =
+    "ERROR: " + e.code + " - " + e.message;
+}
 };
 
 onAuthStateChanged(auth, user => {
