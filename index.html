@@ -144,6 +144,19 @@ button {
   <div id="childPage" style="display:none">
     <h2>Telefon Anak 📱</h2>
 
+    <button id="notifyBtn" style="
+background:#1683ff;
+color:white;
+padding:18px;
+border-radius:12px;
+font-size:18px;
+margin:15px;
+">
+🔔 AKTIFKAN NOTIFIKASI
+</button>
+
+<p id="notifyStatus"></p>
+
     <button id="enableSound" style="
 background:#0088ff;
 color:white;
@@ -452,5 +465,54 @@ if ("serviceWorker" in navigator) {
   });
 }
 </script>
+
+<script>
+document.getElementById("notifyBtn")
+.addEventListener("click", async () => {
+
+  const status =
+    document.getElementById("notifyStatus");
+
+  if (!("Notification" in window) ||
+      !("serviceWorker" in navigator)) {
+    status.innerText =
+      "❌ Telefon atau browser tidak menyokong fungsi ini.";
+    return;
+  }
+
+  try {
+    const permission =
+      await Notification.requestPermission();
+
+    if (permission === "granted") {
+
+      const registration =
+        await navigator.serviceWorker.ready;
+
+      await registration.showNotification(
+        "❤️ Dad Alert",
+        {
+          body: "Notifikasi ujian berjaya!",
+          tag: "dad-alert-test"
+        }
+      );
+
+      status.innerText =
+        "✅ Notifikasi dibenarkan!";
+
+    } else {
+      status.innerText =
+        "❌ Kebenaran notifikasi tidak diberikan.";
+    }
+
+  } catch (error) {
+    status.innerText =
+      "❌ Gagal mengaktifkan notifikasi: " +
+      error.message;
+  }
+
+});
+</script>
+  
 </body>
 </html>
