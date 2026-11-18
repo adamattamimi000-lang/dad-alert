@@ -1,0 +1,12 @@
+{
+  "id": "./",
+  "name": "Dad Alert",
+  "short_name": "Dad Alert",
+  "description": "Emergency alert between father and son",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101820",
+  "theme_color": "#101820",
+  "lang": "ms"
+}
