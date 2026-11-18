@@ -2,48 +2,95 @@
 <html lang="ms">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport"
+content="width=device-width, initial-scale=1">
 
-<title>Dad Alert</title>
+<title>Dad Alert ❤️</title>
 
 <style>
+* {
+  box-sizing: border-box;
+}
+
 body {
   background: #101820;
   color: white;
   font-family: Arial, sans-serif;
   text-align: center;
-  padding: 30px 15px;
+  padding: 25px;
 }
 
 h1 {
-  margin-top: 50px;
-  font-size: 35px;
+  margin-top: 35px;
 }
 
-p {
-  color: #cccccc;
+input {
+  display: block;
+  width: 100%;
+  max-width: 350px;
+  padding: 16px;
+  margin: 15px auto;
+  border-radius: 12px;
+  border: none;
+  font-size: 17px;
 }
 
 button {
-  width: 240px;
-  height: 240px;
-  border-radius: 50%;
-  background: #ff3030;
-  color: white;
-  border: 8px solid #ff7777;
-  font-size: 45px;
-  font-weight: bold;
-  margin-top: 70px;
+  border: none;
   cursor: pointer;
+  font-weight: bold;
 }
 
-button:active {
-  background: #aa0000;
+.login {
+  background: #1683ff;
+  color: white;
+  padding: 17px 45px;
+  border-radius: 12px;
+  font-size: 18px;
+}
+
+.sos {
+  width: 240px;
+  height: 240px;
+  background: #ff3030;
+  border-radius: 50%;
+  color: white;
+  font-size: 45px;
+  margin-top: 45px;
+  border: 8px solid #ff8585;
+}
+
+.ack {
+  background: #21aa60;
+  color: white;
+  padding: 20px;
+  border-radius: 15px;
+  font-size: 20px;
+}
+
+.logout {
+  background: #444;
+  color: white;
+  padding: 12px;
+  border-radius: 10px;
+  margin-top: 50px;
+}
+
+#app {
+  display: none;
 }
 
 #status {
-  margin-top: 35px;
   font-size: 19px;
+  margin-top: 30px;
+}
+
+#warning {
+  display: none;
+  background: #b50000;
+  padding: 25px;
+  border-radius: 15px;
+  margin-top: 25px;
 }
 </style>
 </head>
@@ -52,17 +99,248 @@ button:active {
 
 <h1>❤️ Dad Alert</h1>
 
-<p>Tekan butang jika perlukan bantuan</p>
+<div id="loginPage">
+  <h2>Log Masuk</h2>
 
-<button onclick="sendSOS()">SOS</button>
+  <input id="email"
+  type="email"
+  placeholder="Email">
 
-<div id="status">🟢 Sedia digunakan</div>
+  <input id="password"
+  type="password"
+  placeholder="Password">
 
-<script>
-function sendSOS() {
-  document.getElementById("status").innerText =
-    "⚠️ Mod percubaan: alert belum dihantar.";
+  <button class="login" id="loginBtn">
+    LOGIN
+  </button>
+
+  <p id="loginStatus"></p>
+</div>
+
+<div id="app">
+
+  <h2 id="welcome"></h2>
+
+  <div id="dadPage" style="display:none">
+    <p>Tekan SOS jika perlukan bantuan</p>
+
+    <button class="sos" id="sosBtn">
+      SOS
+    </button>
+  </div>
+
+  <div id="childPage" style="display:none">
+    <h2>Telefon Anak 📱</h2>
+
+    <div id="warning">
+      <h1>🚨 AYAH PERLUKAN BANTUAN!</h1>
+
+      <button class="ack" id="ackBtn">
+        SAYA DAH TERIMA
+      </button>
+    </div>
+
+    <p id="normal">Tiada SOS aktif</p>
+  </div>
+
+  <p id="status">Sedang menyambung...</p>
+
+  <button class="logout" id="logoutBtn">
+    Log Keluar
+  </button>
+
+</div>
+
+<script type="module">
+
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js";
+
+import {
+ getAuth,
+ signInWithEmailAndPassword,
+ onAuthStateChanged,
+ signOut
 }
+from "https://www.gstatic.com/firebasejs/13.3.0/firebase-auth.js";
+
+import {
+ getDatabase,
+ ref,
+ set,
+ onValue
+}
+from "https://www.gstatic.com/firebasejs/13.3.0/firebase-database.js";
+
+
+// MASUKKAN FIREBASE CONFIG KAU
+
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyBSlq4jaXIpOjLm84p4zIctvVQabg6Rayc",
+  authDomain: "dadalert.firebaseapp.com",
+  databaseURL: "https://dadalert-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "dadalert",
+  storageBucket: "dadalert.firebasestorage.app",
+  messagingSenderId: "103138330569",
+  appId: "1:103138330569:web:bd654307d854fab3964a18"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+
+// MASUKKAN UID SEBENAR
+
+const DAD_UID = "J3tuJfEIVLVFY38EdKdGYCCaat63";
+
+const CHILD_UID = "0WhUl88uI3cT1tcEhP5YwXidUmf1";
+
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+let sosTime = 0;
+let ackTime = 0;
+let unsubscribe = [];
+
+const el = id => document.getElementById(id);
+
+function displayAlert() {
+  const active = sosTime > ackTime;
+
+  el("warning").style.display =
+    active ? "block" : "none";
+
+  el("normal").style.display =
+    active ? "none" : "block";
+}
+
+el("loginBtn").onclick = async () => {
+  el("loginStatus").innerText = "Sedang login...";
+
+  try {
+    await signInWithEmailAndPassword(
+      auth,
+      el("email").value.trim(),
+      el("password").value
+    );
+  } catch (e) {
+    el("loginStatus").innerText =
+      "Login gagal. Semak email dan password.";
+  }
+};
+
+onAuthStateChanged(auth, user => {
+
+  unsubscribe.forEach(fn => fn());
+  unsubscribe = [];
+
+  if (!user) {
+    el("loginPage").style.display = "block";
+    el("app").style.display = "none";
+    return;
+  }
+
+  if (
+    user.uid !== DAD_UID &&
+    user.uid !== CHILD_UID
+  ) {
+    el("loginStatus").innerText =
+      "Akaun tidak dibenarkan.";
+    signOut(auth);
+    return;
+  }
+
+  el("loginPage").style.display = "none";
+  el("app").style.display = "block";
+
+  const isDad = user.uid === DAD_UID;
+
+  el("dadPage").style.display =
+    isDad ? "block" : "none";
+
+  el("childPage").style.display =
+    isDad ? "none" : "block";
+
+  el("welcome").innerText =
+    isDad ? "Hai Ayah ❤️" : "Hai Anak ❤️";
+
+  const unsubSOS = onValue(
+    ref(db, "sos"),
+    snapshot => {
+      sosTime = snapshot.val() || 0;
+      displayAlert();
+
+      if (isDad && sosTime > ackTime) {
+        el("status").innerText =
+          "🚨 SOS direkodkan. Menunggu pengesahan anak.";
+      }
+    },
+    () => {
+      el("status").innerText =
+        "⚠️ Gagal membaca SOS. Semak sambungan.";
+    }
+  );
+
+  const unsubAck = onValue(
+    ref(db, "ack"),
+    snapshot => {
+      ackTime = snapshot.val() || 0;
+      displayAlert();
+
+      if (isDad && sosTime <= ackTime) {
+        el("status").innerText =
+          "✅ Tiada SOS yang menunggu pengesahan.";
+      }
+    },
+    () => {
+      el("status").innerText =
+        "⚠️ Gagal membaca pengesahan.";
+    }
+  );
+
+  unsubscribe = [unsubSOS, unsubAck];
+});
+
+el("sosBtn").onclick = async () => {
+  el("status").innerText = "Menghantar SOS...";
+
+  el("sosBtn").disabled = true;
+
+  try {
+    await set(ref(db, "sos"), Date.now());
+
+    el("status").innerText =
+      "✅ SOS direkodkan. Belum disahkan oleh anak.";
+
+  } catch (e) {
+    el("status").innerText =
+      "❌ Tidak berjaya. Sila telefon anak.";
+  } finally {
+    el("sosBtn").disabled = false;
+  }
+};
+
+el("ackBtn").onclick = async () => {
+  try {
+    await set(ref(db, "ack"), Date.now());
+    el("status").innerText =
+      "✅ Pengesahan telah direkodkan.";
+  } catch (e) {
+    el("status").innerText =
+      "❌ Gagal mengesahkan SOS.";
+  }
+};
+
+el("logoutBtn").onclick = () => signOut(auth);
+
 </script>
 
 </body>
