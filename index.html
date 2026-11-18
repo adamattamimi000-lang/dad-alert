@@ -132,6 +132,17 @@ button {
   <div id="childPage" style="display:none">
     <h2>Telefon Anak 📱</h2>
 
+    <button id="enableSound" style="
+background:#0088ff;
+color:white;
+padding:18px;
+border-radius:12px;
+font-size:18px;
+margin:15px;
+">
+🔊 AKTIFKAN BUNYI
+</button>
+
     <div id="warning">
       <h1>🚨 ABAH PERLUKAN BANTUAN!</h1>
 
@@ -203,6 +214,71 @@ let unsubscribe = [];
 
 const el = id => document.getElementById(id);
 
+  let audioCtx = null;
+let alarmInterval = null;
+let soundEnabled = false;
+let lastActive = false;
+let alertInitialized = false;
+
+function beep() {
+  if (!audioCtx || audioCtx.state !== "running") return;
+
+  const oscillator = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  oscillator.type = "square";
+  oscillator.frequency.value = 880;
+
+  oscillator.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(
+    0.001,
+    audioCtx.currentTime + 0.4
+  );
+
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + 0.4);
+}
+
+function startAlarm() {
+  if (!soundEnabled || alarmInterval) return;
+
+  beep();
+  alarmInterval = setInterval(beep, 900);
+}
+
+function stopAlarm() {
+  if (alarmInterval) {
+    clearInterval(alarmInterval);
+    alarmInterval = null;
+  }
+}
+
+el("enableSound").onclick = async () => {
+  try {
+    audioCtx ??= new (window.AudioContext ||
+      window.webkitAudioContext)();
+
+    await audioCtx.resume();
+
+    soundEnabled = audioCtx.state === "running";
+
+    el("enableSound").innerText = soundEnabled
+      ? "✅ BUNYI DIAKTIFKAN"
+      : "❌ GAGAL AKTIFKAN BUNYI";
+
+    if (soundEnabled) {
+      beep();
+      if (sosTime > ackTime) startAlarm();
+    }
+  } catch (e) {
+    el("enableSound").innerText =
+      "❌ GAGAL AKTIFKAN BUNYI";
+  }
+};
+
 function displayAlert() {
   const active = sosTime > ackTime;
 
@@ -211,6 +287,17 @@ function displayAlert() {
 
   el("normal").style.display =
     active ? "none" : "block";
+
+  const isChild =
+    auth.currentUser?.uid === CHILD_UID;
+
+  if (isChild) {
+    if (active && soundEnabled) {
+      startAlarm();
+    } else {
+      stopAlarm();
+    }
+  }
 }
 
 el("loginBtn").onclick = async () => {
